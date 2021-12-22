@@ -31,6 +31,8 @@ __used __section("__versions") = {
 	{ 0xb7e479f7, "kthread_create_on_node" },
 	{ 0x8f678b07, "__stack_chk_guard" },
 	{ 0x3320a004, "i2c_unregister_device" },
+	{ 0x97255bdf, "strlen" },
+	{ 0x3c3ff9fd, "sprintf" },
 	{ 0xfaa9b28e, "i2c_transfer_buffer_flags" },
 	{ 0xc2c70f41, "i2c_put_adapter" },
 	{ 0x33737f91, "i2c_new_client_device" },
@@ -45,4 +47,4 @@ __used __section("__versions") = {
 MODULE_INFO(depends, "");
 
 
-MODULE_INFO(srcversion, "53D4E41CF15FF5214044EB6");
+MODULE_INFO(srcversion, "49ABD4F02A71D2394FF9081");
