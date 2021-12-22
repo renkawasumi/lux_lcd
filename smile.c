@@ -57,23 +57,26 @@ static int smile_thread(void *num)
     i2c_master_send(my_lcd, buf, 2); // display on 
     msleep(1);
 
-    buf[0] = 0x40;
-    
-    char lcd_lux[32];
-    sprintf(lcd_lux, "%d", 5);
-    int i;
-    for(i = 0; i < strlen(lcd_lux); i++){
-        buf[1] = lcd_lux[i];
-        i2c_master_send(my_lcd, buf, 2);
-    }
-
-    /*char *lcd_str = "12";
+    buf[0] = 0x40; 
+    char *lcd_str = "Lux";
     int i;
     for(i = 0; i < strlen(lcd_str); i++){
         buf[1] = lcd_str[i];
         i2c_master_send(my_lcd, buf, 2);
-    }*/
-    
+    }
+  
+    buf[0] = 0x00; 
+    buf[1] = 0x40 + 0x80;
+    i2c_master_send(my_lcd, buf, 2);
+
+    buf[0] = 0x40; 
+    char lcd_lux[32];
+    int lux = 20;
+    sprintf(lcd_lux, "%d", lux);
+    for(i = 0; i < strlen(lcd_lux); i++){
+        buf[1] = lcd_lux[i];
+        i2c_master_send(my_lcd, buf, 2);
+    }
 
     /*while(!kthread_should_stop()) {// 停止を指示されたらループを抜ける
         buf[0] = 0x40;
