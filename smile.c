@@ -4,7 +4,7 @@
 #include<linux/i2c.h>
 
 static struct i2c_board_info info_lcd = { // 雛形を書き換え
-    .type = "lcd", // 名前
+    .type = "aqm0802a", // 名前
     .addr = 0x3e,   // アドレス
     .flags = I2C_CLIENT_WAKE,
 };
@@ -75,10 +75,10 @@ static int smile_thread(void *num)
 	i2c_master_send(my_lux, "\x10", 1); // 
  
     buf[0] = 0x40;
-    char *lcd_str = "Lux";
+    char *title = "Title";
     int i;
-    for(i = 0; i < strlen(lcd_str); i++){
-    	buf[1] = lcd_str[i];
+    for(i = 0; i < strlen(title); i++){
+    	buf[1] = title[i];
 	i2c_master_send(my_lcd, buf, 2);
     }
  
@@ -86,21 +86,15 @@ static int smile_thread(void *num)
 		buf[0] = 0x00;
     	buf[1] = 0x40 + 0x80;
     	i2c_master_send(my_lcd, buf, 2);
-
-		msleep(200);
-		cnt = i2c_master_recv(my_lux, dat, 2);	
-		lx = (dat[0] * 256 + dat[1]) * 1000 * 6 / 5;
-		printk(KERN_INFO "%d.%d lx\n", lx / 1000, lx % 1000);
-		
-		buf[0] = 0x40; 
-    	char lcd_lux[32];
-    	sprintf(lcd_lux, "%d.%d", lx / 1000, lx % 1000);
-        for(i = 0; i < strlen(lcd_lux); i++){
-	    buf[1] = lcd_lux[i];
-            i2c_master_send(my_lcd, buf, 2);
-        }
-    }
 	
+		buf[0] = 0x40;
+		char *music_name = "Hoge";
+    	for(i = 0; i < strlen(music_name); i++){
+    		buf[1] = music_name[i];
+			i2c_master_send(my_lcd, buf, 2);
+    	}
+		msleep(200);
+    }	
 	i2c_master_send(my_lux, "\x00", 1); // power off
 	i2c_unregister_device(my_lux);  // I2Cデバイス登録を解除 
     i2c_unregister_device(my_lcd);  // I2Cデバイス登録を解除 
