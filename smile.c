@@ -56,33 +56,31 @@ static int smile_thread(void *num)
     buf[1] = 0x0c;
     i2c_master_send(my_lcd, buf, 2); // display on 
     msleep(1);
-
-    buf[0] = 0x40; 
+ 
+    buf[0] = 0x40;
     char *lcd_str = "Lux";
     int i;
     for(i = 0; i < strlen(lcd_str); i++){
-        buf[1] = lcd_str[i];
-        i2c_master_send(my_lcd, buf, 2);
+    	buf[1] = lcd_str[i];
+	i2c_master_send(my_lcd, buf, 2);
     }
-  
-    buf[0] = 0x00; 
-    buf[1] = 0x40 + 0x80;
-    i2c_master_send(my_lcd, buf, 2);
+ 
+	int hoge = 0; 
+    while(!kthread_should_stop()) {// 停止を指示されたらループを抜ける
+		buf[0] = 0x00;
+    	buf[1] = 0x40 + 0x80;
+    	i2c_master_send(my_lcd, buf, 2);
 
-    buf[0] = 0x40; 
-    char lcd_lux[32];
-    int lux = 20;
-    sprintf(lcd_lux, "%d", lux);
-    for(i = 0; i < strlen(lcd_lux); i++){
-        buf[1] = lcd_lux[i];
-        i2c_master_send(my_lcd, buf, 2);
+		buf[0] = 0x40; 
+    	char lcd_lux[32];
+    	int lux = hoge;
+    	sprintf(lcd_lux, "%d", lux);
+        for(i = 0; i < strlen(lcd_lux); i++){
+	    buf[1] = lcd_lux[i];
+            i2c_master_send(my_lcd, buf, 2);
+        }
+		hoge++;
     }
-
-    /*while(!kthread_should_stop()) {// 停止を指示されたらループを抜ける
-        buf[0] = 0x40;
-        buf[1] = kstrtol("CPU", NULL, 16);
-        i2c_master_send(my_lcd, buf, 2);
-    }*/
 
     i2c_unregister_device(my_lcd);  // I2Cデバイス登録を解除 
 ERR02: 
