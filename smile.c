@@ -9,9 +9,16 @@ static struct i2c_board_info info_lcd = { // 雛形を書き換え
     .flags = I2C_CLIENT_WAKE,
 };
 
+static struct i2c_board_info info_lux = { // 雛形を書き換え
+    .type = "bh1750", // 名前
+    .addr = 0x23,   // アドレス
+    .flags = I2C_CLIENT_WAKE,
+};
+
 static int smile_thread(void *num)
 {
     static struct i2c_client *my_lcd;
+	static struct i2c_client *my_lux;
     struct i2c_adapter *adap;
 
     adap = i2c_get_adapter(1);  // I2Cバス1のアダプタ情報を参照
@@ -19,12 +26,16 @@ static int smile_thread(void *num)
         goto ERR01;
     printk("(o_o) adapter[%s]\n", adap->name);
 
-    // my_lcd = i2c_new_device(adap, &info_lux);   // I2Cデバイス登録
-    // my_lcd = i2c_acpi_new_device(&info_lux, 1, 1);
     my_lcd = i2c_new_client_device(adap, &info_lcd);
     if(my_lcd == NULL)
         goto ERR02;
     printk("(^_^) device[%s:%02x]\n", my_lcd->name, my_lcd->addr);
+	
+	my_lux = i2c_new_client_device(adap, &info_lux);
+    if(my_lux == NULL)
+        goto ERR02;
+    printk("(^_^) device[%s:%02x]\n", my_lux->name, my_lux->addr);
+
 
     unsigned char buf[2] = {};
     buf[0] = 0x00; 
@@ -56,6 +67,12 @@ static int smile_thread(void *num)
     buf[1] = 0x0c;
     i2c_master_send(my_lcd, buf, 2); // display on 
     msleep(1);
+
+	char dat[2];
+	int lx, cnt;
+	i2c_master_send(my_lux, "\x01", 1); // power on
+	msleep(100);
+	i2c_master_send(my_lux, "\x10", 1); // 
  
     buf[0] = 0x40;
     char *lcd_str = "Lux";
@@ -65,23 +82,27 @@ static int smile_thread(void *num)
 	i2c_master_send(my_lcd, buf, 2);
     }
  
-	int hoge = 0; 
     while(!kthread_should_stop()) {// 停止を指示されたらループを抜ける
 		buf[0] = 0x00;
     	buf[1] = 0x40 + 0x80;
     	i2c_master_send(my_lcd, buf, 2);
 
+		msleep(200);
+		cnt = i2c_master_recv(my_lux, dat, 2);	
+		lx = (dat[0] * 256 + dat[1]) * 1000 * 6 / 5;
+		printk(KERN_INFO "%d.%d lx\n", lx / 1000, lx % 1000);
+		
 		buf[0] = 0x40; 
     	char lcd_lux[32];
-    	int lux = hoge;
-    	sprintf(lcd_lux, "%d", lux);
+    	sprintf(lcd_lux, "%d.%d", lx / 1000, lx % 1000);
         for(i = 0; i < strlen(lcd_lux); i++){
 	    buf[1] = lcd_lux[i];
             i2c_master_send(my_lcd, buf, 2);
         }
-		hoge++;
     }
-
+	
+	i2c_master_send(my_lux, "\x00", 1); // power off
+	i2c_unregister_device(my_lux);  // I2Cデバイス登録を解除 
     i2c_unregister_device(my_lcd);  // I2Cデバイス登録を解除 
 ERR02: 
     i2c_put_adapter(adap);  // アダプタの参照終了を通達

@@ -42,9 +42,10 @@ __used __section("__versions") = {
 	{ 0xf9a482f9, "msleep" },
 	{ 0xc8d5ec7e, "i2c_get_adapter" },
 	{ 0xb1ad28e0, "__gnu_mcount_nc" },
+	{ 0xff178f6, "__aeabi_idivmod" },
 };
 
 MODULE_INFO(depends, "");
 
 
-MODULE_INFO(srcversion, "14695ECEB2C4FEC4D37C05C");
+MODULE_INFO(srcversion, "A0D5E4992F3C62F0BA0B025");
