@@ -24,17 +24,33 @@ static int smile_release(struct inode *inode, struct file *filp){
 
 static ssize_t smile_read(struct file *filp, char __user *ubuf, size_t count, loff_t *pos){
     printk("smile_read\n");
-    return 0;
+    printk("Read(%d)\n", (int)count);
+    printk("process:%d\n", current->pid);
+    printk("userland_addr:%p\n", ubuf);
+    printk("pos:%lld\n", *pos);
+    int r;
+    r = simple_read_from_buffer(ubuf, count, pos, buf, len);
+    printk("    ---> %lld\n", *pos);
+    return r;
 }
 
 static ssize_t smile_write(struct file *filp, const char __user *ubuf, size_t count, loff_t *pos){
     printk("smile_write\n");
-    return 0;
+    printk("Write(%d)\n", (int)count);
+    printk("process:%d\n", current->pid);
+    printk("userland_addr:%p\n", ubuf);
+    printk("pos:%lld\n", *pos);
+    int r;
+    r = simple_write_to_buffer(buf, PAGE_SIZE, pos, ubuf, count);
+    len = count;
+    printk("    ---> %lld\n", *pos);
+    return r;
 }
 
 loff_t smile_lseek(struct file *filp, loff_t pos, int whence){
     printk("smile_lseek\n");
-    return 0;
+    printk("Lseek(%lld)\n", pos);
+    return filp->f_pos = pos;
 }
 
 static struct file_operations fops = {
