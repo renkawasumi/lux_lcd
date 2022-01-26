@@ -6,62 +6,32 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 
-static unsigned char *buf;
-static int len;
+#include <linux/sched.h>
+static int lux = 0;
+static struct kobject *kobj01;
 
-static int smile_open(struct inode *inode, struct file *filp){
-    dev_t devid = inode->i_rdev;
-    printk("DEV[%ld] %d:%d\n", inode->i_ino, imajor(inode), iminor(inode));
-    printk("process %d\n", current->pid);
-    return 0;
+static ssize_t                    // 書き込んだ文字列の長さ
+xyz_show(struct kobject *kobj,    // 注目しているカーネルオブジェクト
+         struct kobj_attribute *attr,    // 注目している属性
+         char *buf                // この番地にユーザランドに渡す情報を書く
+){
+    printk("PID:%d SHOW %s:%s:%d\n", current->pid, kobj->name, attr->attr.name, lux);    
+    return sprintf(buf, "%d\n", lux); 
 }
-
-static int smile_release(struct inode *inode, struct file *filp){
-    printk("close, pos%lld\n", filp->f_pos);
-    printk("process: %d\n", current->pid);
-    return 0;
+ 
+static ssize_t                    // 読みだした文字列の長さ
+xyz_store(struct kobject *kobj,    // 注目しているカーネルオブジェクト
+          struct kobj_attribute *attr,    // 注目している属性
+          const char *buf,        // ユーザランドから渡される文字列の場所
+          size_t count            // ユーザランドから渡された文字列の長さ
+){
+    printk("PID:%d STORE %s:%s:%d-->", current->pid, kobj->name, attr->attr.name, lux); 
+    sscanf(buf, "%d", &lux);
+    printk("%d\n", lux); 
+    return count;
 }
-
-static ssize_t smile_read(struct file *filp, char __user *ubuf, size_t count, loff_t *pos){
-    printk("smile_read\n");
-    printk("Read(%d)\n", (int)count);
-    printk("process:%d\n", current->pid);
-    printk("userland_addr:%p\n", ubuf);
-    printk("pos:%lld\n", *pos);
-    int r;
-    r = simple_read_from_buffer(ubuf, count, pos, buf, len);
-    printk("    ---> %lld\n", *pos);
-    return r;
-}
-
-static ssize_t smile_write(struct file *filp, const char __user *ubuf, size_t count, loff_t *pos){
-    printk("smile_write\n");
-    printk("Write(%d)\n", (int)count);
-    printk("process:%d\n", current->pid);
-    printk("userland_addr:%p\n", ubuf);
-    printk("pos:%lld\n", *pos);
-    int r;
-    r = simple_write_to_buffer(buf, PAGE_SIZE, pos, ubuf, count);
-    len = count;
-    printk("    ---> %lld\n", *pos);
-    return r;
-}
-
-loff_t smile_lseek(struct file *filp, loff_t pos, int whence){
-    printk("smile_lseek\n");
-    printk("Lseek(%lld)\n", pos);
-    return filp->f_pos = pos;
-}
-
-static struct file_operations fops = {
-    .owner = THIS_MODULE,
-    .open = smile_open,
-    .release = smile_release,
-    .read = smile_read,
-    .write = smile_write,
-    .llseek = smile_lseek,
-    .unlocked_ioctl = NULL,
-};
+ 
+static struct kobj_attribute myatt =__ATTR(xyz, 0660, xyz_show, xyz_store);
 
 static struct i2c_board_info info_lcd = { // 雛形を書き換え
     .type = "aqm0802a", // 名前
@@ -135,7 +105,7 @@ static int smile_thread(void *num)
 	i2c_master_send(my_lux, "\x10", 1); // 
  
     lcd_buf[0] = 0x40;
-    char *title = "Title";
+    char *title = "Lux";
     int i;
     for(i = 0; i < strlen(title); i++){
     	lcd_buf[1] = title[i];
@@ -147,12 +117,16 @@ static int smile_thread(void *num)
     	lcd_buf[1] = 0x40 + 0x80;
     	i2c_master_send(my_lcd, lcd_buf, 2);
 	
+		cnt = i2c_master_recv(my_lux, dat, 2);	
+		lx = (dat[0] * 256 + dat[1]) * 1000 * 6 / 5;
 		lcd_buf[0] = 0x40;
-		char *music_name = "Hoge";
-    	for(i = 0; i < strlen(music_name); i++){
-    		lcd_buf[1] = music_name[i];
-			i2c_master_send(my_lcd, lcd_buf, 2);
-    	}
+		lux = lx;
+		char lcd_lux[32];
+    	sprintf(lcd_lux, "%d.%d", lx / 1000, lx % 1000);
+        for(i = 0; i < strlen(lcd_lux); i++){
+	    	lcd_buf[1] = lcd_lux[i];
+            i2c_master_send(my_lcd, lcd_buf, 2);
+        }
 		msleep(200);
     }	
 	i2c_master_send(my_lux, "\x00", 1); // power off
@@ -170,11 +144,22 @@ static struct task_struct *mytask = NULL;
 
 int init_module(void)
 {
+	int ret;
     printk("LOAD LCD (o_o)/\n");
-    if(register_chrdev(77, "smile-drv", &fops)){
-        return -EBUSY;
-    }
-    buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+    struct kobject *kobj00; // モジュール（/sys/module/smile/）のkobj
+	kobj00 = &((THIS_MODULE->mkobj).kobj);
+	printk("Module Name: %s\n", kobj00->name); // 確認
+	// myport を /sys/module/smile/に追加
+	kobj01 = kobject_create_and_add("myport", kobj00);
+	if(kobj01==NULL)
+         return -ENOMEM;
+ 	// xyz を /sys/module/smile/myportに追加        
+	ret = sysfs_create_file( kobj01, &myatt.attr);
+	if (ret) {
+			kobject_put(kobj01);
+			printk("(x_x) ERROR\n");
+			return -EINVAL;
+	}
 
     mytask = kthread_run(smile_thread, NULL, "ksmile");//スレッド実行
     return IS_ERR(mytask)? -ENOMEM : 0; 
@@ -183,8 +168,10 @@ int init_module(void)
 void cleanup_module(void)
 {
     kthread_stop(mytask);   // カーネルスレッドに停止を指示
-    kfree(buf);
-    unregister_chrdev(77, "smile-drv");
+    sysfs_remove_file(kobj01, &myatt.attr);
+    kobject_put(kobj01);
+    //kfree(buf);
+    //unregister_chrdev(77, "smile-drv");
     printk("UNLOAD LCD m(x_x)m\n");
 }
 

@@ -1,5 +1,6 @@
 #include <pigpiod_if2.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,16 +11,46 @@
 
 int main(){
     printf("start user\n");
-    int pi = pigpio_start(NULL, NULL);
-    //gpio_write(pi, LED, 0);
+    int fd, r, w;
+    char buff[1024];
+    char *path = "/sys/module/smile/parameters/param1";
+    fd = open(path, O_RDWR, 0666);
+    if(fd < 0){
+        printf("OPEN_ERROR\n");
+        return -1;
+    }
+    while(fgets(buff, 1024, stdin) != NULL){
+        buff[strlen(buff)-1] = '\0';
+        printf("%s\n", buff);
+        w = write(fd, buff, sizeof(buff));
+        if(w < 0){
+            printf("WRITE ERROR\n");
+            return -1;
+        }
+        if(lseek(fd, sizeof(0), SEEK_SET) < 0){
+            printf("LSEEK ERROR\n");
+            return -1;
+        }
+    }
+    if(close(fd) < 0){
+        printf("CLOSE ERROR\n");
+        return -1;
+    }
 
-    char buf[BUFSZ];
+    /*int pi = pigpio_start(NULL, NULL);
+    gpio_write(pi, LED, 0);*/
+
+    /*char buf[BUFSZ];
+    char buf2[BUFSZ];
     int fid;
     int len;
     fid = open("/dev/smile0", O_RDWR);
     len = sprintf(buf, "Hello\n");
     len = write(fid, buf, len);
     write(1, buf, len);
-    close(fid);
+    lseek(fid, 0, 0);
+    len = read(fid, buf2, BUFSZ);
+    write(1, buf2, len);
+    close(fid);*/
     return 0;
 }
