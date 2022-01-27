@@ -12,26 +12,47 @@
 int main(){
     printf("start user\n");
     int fd, r, w;
-    char buff[1024];
-    char *path = "/sys/module/smile/parameters/param1";
-    fd = open(path, O_RDWR, 0666);
-    if(fd < 0){
-        printf("OPEN_ERROR\n");
-        return -1;
+    char buff;
+    char *path = "/sys/module/smile/myport/xyz";
+    //char *path = "/home/pi/test.txt"; 
+    while(1){
+        fd = open(path, O_RDWR, 0666);
+        if(fd < 0){
+            printf("OPEN_ERROR\n");
+            return -1;
+        }
+        r = read(fd, &buff, 1);
+        if(r < 0){
+            printf("READ ERROR\n");
+            return -1;
+        }
+        //buff[r]='\0';
+        printf("r:%d buff:%c\n", r, buff);
+        if(buff == 't'){
+            printf("GOOD\n");
+        }
+        else{
+            printf("NOT\n");
+        }
+        if(close(fd) < 0){
+            printf("CLOSE ERROR\n");
+            return -1;
+        }
     }
-    while(fgets(buff, 1024, stdin) != NULL){
-        buff[strlen(buff)-1] = '\0';
-        printf("%s\n", buff);
-        w = write(fd, buff, sizeof(buff));
-        if(w < 0){
-            printf("WRITE ERROR\n");
+
+    /*while(1){
+        r = read(fd, buff, 100);
+        if(r < 0){
+            printf("READ ERROR\n");
             return -1;
         }
         if(lseek(fd, sizeof(0), SEEK_SET) < 0){
             printf("LSEEK ERROR\n");
             return -1;
         }
-    }
+        buff[r]='\0';
+        printf("r:%d buff:%s\n", r, buff);
+    }*/
     if(close(fd) < 0){
         printf("CLOSE ERROR\n");
         return -1;

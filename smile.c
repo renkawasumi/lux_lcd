@@ -7,7 +7,7 @@
 #include <linux/fs.h>
 
 #include <linux/sched.h>
-static int lux = 0;
+static char lux = 't';
 static struct kobject *kobj01;
 
 static ssize_t                    // 書き込んだ文字列の長さ
@@ -15,8 +15,8 @@ xyz_show(struct kobject *kobj,    // 注目しているカーネルオブジェ�
          struct kobj_attribute *attr,    // 注目している属性
          char *buf                // この番地にユーザランドに渡す情報を書く
 ){
-    printk("PID:%d SHOW %s:%s:%d\n", current->pid, kobj->name, attr->attr.name, lux);    
-    return sprintf(buf, "%d\n", lux); 
+    printk("PID:%d SHOW %s:%s:%c\n", current->pid, kobj->name, attr->attr.name, lux);    
+    return sprintf(buf, "%c\n", lux); 
 }
  
 static ssize_t                    // 読みだした文字列の長さ
@@ -25,9 +25,9 @@ xyz_store(struct kobject *kobj,    // 注目しているカーネルオブジェ
           const char *buf,        // ユーザランドから渡される文字列の場所
           size_t count            // ユーザランドから渡された文字列の長さ
 ){
-    printk("PID:%d STORE %s:%s:%d-->", current->pid, kobj->name, attr->attr.name, lux); 
-    sscanf(buf, "%d", &lux);
-    printk("%d\n", lux); 
+    printk("PID:%d STORE %s:%s:%c-->", current->pid, kobj->name, attr->attr.name, lux); 
+    sscanf(buf, "%c", &lux);
+    printk("%c\n", lux); 
     return count;
 }
  
@@ -120,7 +120,13 @@ static int smile_thread(void *num)
 		cnt = i2c_master_recv(my_lux, dat, 2);	
 		lx = (dat[0] * 256 + dat[1]) * 1000 * 6 / 5;
 		lcd_buf[0] = 0x40;
-		lux = lx;
+		printk("lx:%d\n", lx);
+		if(lx <= 10000){
+			lux = 't';
+		}
+		else{
+			lux = 'f';
+		}
 		char lcd_lux[32];
     	sprintf(lcd_lux, "%d.%d", lx / 1000, lx % 1000);
         for(i = 0; i < strlen(lcd_lux); i++){
@@ -170,8 +176,6 @@ void cleanup_module(void)
     kthread_stop(mytask);   // カーネルスレッドに停止を指示
     sysfs_remove_file(kobj01, &myatt.attr);
     kobject_put(kobj01);
-    //kfree(buf);
-    //unregister_chrdev(77, "smile-drv");
     printk("UNLOAD LCD m(x_x)m\n");
 }
 
