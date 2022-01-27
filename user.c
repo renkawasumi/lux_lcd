@@ -11,6 +11,8 @@
 
 int main(){
     printf("start user\n");
+    int pi = pigpio_start(NULL, NULL);
+    gpio_write(pi, LED, 0);
     int fd, r, w;
     char buff;
     char *path = "/sys/module/smile/myport/xyz";
@@ -30,9 +32,11 @@ int main(){
         printf("r:%d buff:%c\n", r, buff);
         if(buff == 't'){
             printf("GOOD\n");
+            gpio_write(pi, LED, 1);
         }
         else{
             printf("NOT\n");
+            gpio_write(pi, LED, 0);
         }
         if(close(fd) < 0){
             printf("CLOSE ERROR\n");
